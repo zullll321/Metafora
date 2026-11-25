@@ -363,6 +363,15 @@ details[open] p,.st.open .pn p{animation:pd .5s .08s both}
 /* ===== filter berita ===== */
 .bflt{margin:-20px auto 36px}
 @media (max-width:809px){.bflt{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;margin:-20px -16px 28px;padding:4px 16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.bflt::-webkit-scrollbar{display:none}.bflt button{flex:none}}
+
+/* ===== perbaikan lompat saat bar alamat HP muncul/hilang ===== */
+.pin.on{height:calc(var(--ph,100vh) * (1 + var(--n,6) * .46))}
+.pin.on .pinin{height:var(--ph,100vh)}
+
+/* ===== dinding berita: tidak terpotong, ukuran pas per perangkat ===== */
+.show.nw{transform:perspective(1500px) rotateX(14deg) rotateZ(-2deg) scale(.94);transform-origin:50% 30%}
+@media (max-width:809px){.show.nw{transform:perspective(1200px) rotateX(10deg) scale(.96);height:500px}}
+@media (min-width:600px) and (max-width:809px){.show.nw{grid-template-columns:repeat(3,1fr);gap:14px}.show.nw .col:nth-child(3){display:block}.nw .tile{aspect-ratio:4/5}.nw .tile:nth-child(n){margin-bottom:14px}}
 </style>
 </head>
 <body>
@@ -890,14 +899,20 @@ function Pin(sec,sel,setOpen){var items=$$(sel,sec),pb=$('.pgb',sec),on=false,ac
   function fit(){sec.classList.remove('on','cmp','cmp2','cmp3');on=false;act=-1;items.forEach(function(x){x.classList.remove('hid');x.inert=false});if(edit||rm)return;
     var inn=$('.pinin',sec),ok=function(){return innerHeight>=Math.max(inn.offsetHeight+104,520)};sec.classList.add('cmp');
     if(!ok()){sec.classList.add('cmp2');if(!ok()){sec.classList.add('cmp3');if(!ok()){sec.classList.remove('cmp','cmp2','cmp3');return}}}
-    sec.classList.add('on');sec.style.setProperty('--n',items.length);on=true;upd()}
+    sec.classList.add('on');sec.style.setProperty('--n',items.length);sec.style.setProperty('--ph',Math.round(innerHeight)+'px');on=true;upd()}
   return {items:items,jump:jump,upd:upd,fit:fit,on:function(){return on}}}
 var ps=Pin($('#proses'),'.st',function(x,o){x.classList.toggle('open',o);$('.sb',x).setAttribute('aria-expanded',o)}),pf=Pin($('#faq'),'details',function(x,o){x.open=o});
 function tgl(b){if(edit)return;var x=b.parentNode;if(ps.on()){ps.jump(ps.items.indexOf(x));return}var o=!x.classList.contains('open');ps.items.forEach(function(y){y.classList.remove('open');$('.sb',y).setAttribute('aria-expanded','false')});if(o){x.classList.add('open');b.setAttribute('aria-expanded','true')}}
 $$('.sb',box).forEach(function(b){b.onclick=function(){tgl(b)};b.onkeydown=function(e){if((e.key==='Enter'||e.key===' ')&&e.target===b){e.preventDefault();tgl(b)}}});
 pf.items.forEach(function(d,i){$('summary',d).addEventListener('click',function(e){if(pf.on()){e.preventDefault();pf.jump(i)}})});
 var pt=false,rt;addEventListener('scroll',function(){if(pt)return;pt=true;requestAnimationFrame(function(){pt=false;ps.upd();pf.upd()})},{passive:true});
-function refit(){ps.fit();pf.fit()}addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(refit,150)});addEventListener('load',refit);refit();
+function refit(){ps.fit();pf.fit()}
+var anc=null,ancT=0,ancP=null;
+function saveAnc(){var m=document.querySelector('main');anc=null;if(!m||m.hidden)return;var y=Math.min(innerHeight*.35,260),k=m.children;for(var i=0;i<k.length;i++){var r=k[i].getBoundingClientRect();if(r.height&&r.top<=y&&r.bottom>y){anc=k[i];ancT=r.top;ancP=anc.classList.contains('on')&&r.height>innerHeight?Math.min(1,Math.max(0,-r.top/(r.height-innerHeight))):null;return}}}
+function keepAnc(){if(!anc||!anc.isConnected)return;var r=anc.getBoundingClientRect(),t;if(ancP!=null&&anc.classList.contains('on')&&r.height>innerHeight)t=scrollY+r.top+ancP*(r.height-innerHeight);else t=scrollY+r.top-ancT;if(Math.abs(t-scrollY)>1)scrollTo({top:t,behavior:'instant'})}
+function refitKeep(){refit();keepAnc()}
+var sa=false;addEventListener('scroll',function(){if(sa)return;sa=true;requestAnimationFrame(function(){sa=false;saveAnc()})},{passive:true});
+var lw=innerWidth,lh=innerHeight;addEventListener('resize',function(){if(innerWidth!==lw)keepAnc();clearTimeout(rt);rt=setTimeout(function(){var dw=Math.abs(innerWidth-lw),dh=Math.abs(innerHeight-lh);if(!dw&&dh<160)return;lw=innerWidth;lh=innerHeight;refitKeep()},150)});addEventListener('load',refitKeep);refit();
 /* ===== portofolio ===== */
 var PF=JSON.parse($('#pfdata').textContent),PI=JSON.parse($('#pfimg').textContent);
 var CATS=['Media Management','Photography & Videography','Website Development','Information Systems','Design & Branding','Digital Solutions'];
